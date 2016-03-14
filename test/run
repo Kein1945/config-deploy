@@ -1,0 +1,29 @@
+#!/bin/bash
+dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+env_dir="$dir/.."
+
+cp -r $dir/dist_home $dir/home
+echo -e "\e[0;31mTest home deployed\e[m"
+
+$dir/../deploy $dir/home $dir/env
+
+echo
+echo -e "\e[0;31mHome after deploy\e[m"
+ls -la $dir/home
+echo -e "\e[0;31mEnv after deploy\e[m"
+ls -la $dir/env
+
+echo -e "\n\e[0;31mList files in home\e[m"
+
+for file in $dir/home/*; do
+    echo -e "\e[0;32m$file\e[m"
+    cat $file
+    echo -e "\n"
+done
+echo -e "\n\e[0;31mList files in env\e[m"
+for file in $dir/env/*; do
+    echo -e "\e[0;32m$file\e[m"
+    cat $file
+    echo -e "\n"
+done
+rm -rf $dir/home

@@ -1,0 +1,113 @@
+#!/usr/bin/bash
+
+_error() {
+    echo -e "\e[1;31merror: $1\e[m"
+}
+
+_warn() {
+    echo -e "\e[1;33mwarn: $1\e[m"
+}
+
+_info() {
+    echo -e "\e[1;32minfo: $1\e[m"
+}
+
+_pwd="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/env"
+env_dir=${2:-$_pwd}
+home=${1:-$HOME}
+echo "Home for deploy: $home"
+echo "Env for deploy $env_dir"
+lod="$home/.env/local"
+
+if [ ! -d $lod ]; then
+    mkdir -p $lod
+    _info "Local env created: $lod"
+fi
+
+if [ ! -d $lod/.backup/ ]; then
+    mkdir -p $lod/.backup/
+    _info "Local backup: $lod/.backup/"
+fi 
+
+create_symlynk() {
+    filename=$1
+    if [ -f $home/$filename ]; then
+        _warn "File $filename already exists. Moved to $lod"
+    fi
+}
+
+diff_merge_file(){
+    file=$1
+    read -p "Conflict. Run merge for diff files(Y/y) or leave local version(N/n)?" -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        meld $lod/$file $env_dir/$file 2>/dev/null 1>/dev/null
+        if (( $? )); then
+            _warn "Install meld for diff files. meld $lod/$file $env_dir/$file"
+            exit 1
+        fi
+    fi
+}
+
+deploy_file(){
+    artifact=$1
+}
+
+deploy_env_symlink(){
+    artifact=$1
+    ln -s $env_dir/$artifact $lod/$artifact
+}
+
+deploy_local_symlink(){
+    artifact=$1
+    ln -s $lod/$artifact $home/$artifact
+}
+
+deploy() {
+    artifact=$1
+    _info "Deploy artifact: $artifact"
+    if [[ -d $home/$artifact ]]; then
+        cp -r $env_dir/$artifact $lod/$artifact
+        _warn "Artifact $artifact is directory. Not implemented yet. Please rename or remove directory and later merge it in $lod directory."
+        _info "$artifact copied to $lod/"
+    elif [[ -f $home/$artifact ]]; then
+        if [ "$(readlink $home/$artifact)" != "$lod/$artifact" ]; then
+            diff $home/$artifact $env_dir/$artifact >/dev/null
+            # Если существующие файлы разные
+            if (( $? )); then
+                mv $home/$artifact $lod/$artifact
+                # Тогда создаем локальную копию и предлагаем мердж
+                _warn "Artifact $artifact already exists. Moved to $lod"
+                diff_merge_file $artifact
+            else
+                _info "Artifact same with dist. But original moved to $lod/.backup/$artifact"
+                mv $home/$artifact $lod/.backup/$artifact
+                deploy_env_symlink $artifact
+            fi
+            deploy_local_symlink $artifact
+        else
+            # TODO: Check new update from pulled repo
+            echo "Procceed $artifact doesn't required. Already exists."
+        fi
+    else
+        deploy_env_symlink $artifact
+        deploy_local_symlink $artifact
+    fi
+}
+
+GLOBIGNORE=".:.."
+shopt -u dotglob
+old_dir=$(pwd)
+cd $env_dir
+echo  $env_dir
+for file in $(echo .*); do
+    artifact=$(echo $file | sed -e "s;$env_dir;;" -e "s;/;;" )
+    deploy $artifact
+done
+for file in $(ls $env_dir/); do
+    artifact=$(echo $file | sed -e "s;$env_dir;;" -e "s;/;;" )
+    deploy $artifact
+done
+cd $old_dir
+
+_info "Deploy done"
