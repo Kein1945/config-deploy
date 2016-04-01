@@ -13,10 +13,19 @@ _info() {
 }
 
 _pwd="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/env"
-env_dir=${2:-$_pwd}
+
+if [ "$1" == '--help' ]; then
+    echo "Usage: ./deploy [SOURCE_DIRECTORY] [DEPLOY_DIRECTORY]"
+    echo -e "\tSOURCE_DIRECTORY - directory with environment files, default env in script dir: $_pwd"
+    echo -e "\tDEPLOY_DIRECTORY - default: \$HOME"
+    exit
+fi
+
+_source=${2:-$_pwd}
 home=${1:-$HOME}
 echo "Home for deploy: $home"
-echo "Env for deploy $env_dir"
+echo "Env for deploy $_source"
+exit
 lod="$home/.env/local"
 
 if [ ! -d $lod ]; then
@@ -41,9 +50,9 @@ diff_merge_file(){
     read -p "Conflict. Run merge for diff files(Y/y) or leave local version(N/n)?" -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        meld $lod/$file $env_dir/$file 2>/dev/null 1>/dev/null
+        meld $lod/$file $_source/$file 2>/dev/null 1>/dev/null
         if (( $? )); then
-            _warn "Install meld for diff files. meld $lod/$file $env_dir/$file"
+            _warn "Install meld for diff files. meld $lod/$file $_source/$file"
             exit 1
         fi
     fi
@@ -55,7 +64,7 @@ deploy_file(){
 
 deploy_env_symlink(){
     artifact=$1
-    ln -s $env_dir/$artifact $lod/$artifact
+    ln -s $_source/$artifact $lod/$artifact
 }
 
 deploy_local_symlink(){
@@ -67,12 +76,12 @@ deploy() {
     artifact=$1
     _info "Deploy artifact: $artifact"
     if [[ -d $home/$artifact ]]; then
-        cp -r $env_dir/$artifact $lod/$artifact
+        cp -r $_source/$artifact $lod/$artifact
         _warn "Artifact $artifact is directory. Not implemented yet. Please rename or remove directory and later merge it in $lod directory."
         _info "$artifact copied to $lod/"
     elif [[ -f $home/$artifact ]]; then
         if [ "$(readlink $home/$artifact)" != "$lod/$artifact" ]; then
-            diff $home/$artifact $env_dir/$artifact >/dev/null
+            diff $home/$artifact $_source/$artifact >/dev/null
             # Если существующие файлы разные
             if (( $? )); then
                 mv $home/$artifact $lod/$artifact
@@ -98,14 +107,14 @@ deploy() {
 GLOBIGNORE=".:.."
 shopt -u dotglob
 old_dir=$(pwd)
-cd $env_dir
-echo  $env_dir
+cd $_source
+echo  $_source
 for file in $(echo .*); do
-    artifact=$(echo $file | sed -e "s;$env_dir;;" -e "s;/;;" )
+    artifact=$(echo $file | sed -e "s;$_source;;" -e "s;/;;" )
     deploy $artifact
 done
-for file in $(ls $env_dir/); do
-    artifact=$(echo $file | sed -e "s;$env_dir;;" -e "s;/;;" )
+for file in $(ls $_source/); do
+    artifact=$(echo $file | sed -e "s;$_source;;" -e "s;/;;" )
     deploy $artifact
 done
 cd $old_dir
