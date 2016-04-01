@@ -15,17 +15,16 @@ _info() {
 _pwd="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/env"
 
 if [ "$1" == '--help' ]; then
-    echo "Usage: ./deploy [SOURCE_DIRECTORY] [DEPLOY_DIRECTORY]"
-    echo -e "\tSOURCE_DIRECTORY - directory with environment files, default env in script dir: $_pwd"
+    echo "Usage: ./deploy [DEPLOY_DIRECTORY] [SOURCE_DIRECTORY] "
     echo -e "\tDEPLOY_DIRECTORY - default: \$HOME"
+    echo -e "\tSOURCE_DIRECTORY - directory with environment files, default env in script dir: $_pwd"
     exit
 fi
 
-_source=${2:-$_pwd}
 home=${1:-$HOME}
+_source=${2:-$_pwd}
 echo "Home for deploy: $home"
 echo "Env for deploy $_source"
-exit
 lod="$home/.env/local"
 
 if [ ! -d $lod ]; then
@@ -104,17 +103,11 @@ deploy() {
     fi
 }
 
-GLOBIGNORE=".:.."
-shopt -u dotglob
 old_dir=$(pwd)
 cd $_source
-echo  $_source
-for file in $(echo .*); do
-    artifact=$(echo $file | sed -e "s;$_source;;" -e "s;/;;" )
-    deploy $artifact
-done
-for file in $(ls $_source/); do
-    artifact=$(echo $file | sed -e "s;$_source;;" -e "s;/;;" )
+echo "==============="
+for file in $(ls -a $_source | grep -v -w "."); do
+    artifact=$(echo $file | sed -e "s; $_source;;" -e "s;/;;" )
     deploy $artifact
 done
 cd $old_dir
