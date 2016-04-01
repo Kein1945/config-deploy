@@ -1,20 +1,20 @@
 [alias]
-        st = status
+	s = status -sb
         restore = checkout HEAD --
         h = log --pretty='format:%Cred%h%Creset %C(yellow)%d%Creset - %s %C(green)%ar%Creset %C(blue)%an%Creset' --graph --all --decorate
-        ci = commit -m
-        co = checkout
-        br = branch
-        s = status -sb
-        out = log --pretty='format:%h - %an, %ar : %s' --graph origin/master..
-        su = submodule update
+	ci = commit -m
+	co = checkout
+	br = branch
+	out = log --pretty='format:%h - %an, %ar : %s' --graph origin/master..
+    files = show --pretty="format:%Cred%h%Creset %C(yellow)%d%Creset - %s %C(green)%ar%Creset %C(blue)%an%Creset" --name-only --decorate
+	su = submodule update
 [core]
-    pager = less -+F
+	pager = less -FXRS
     excludesfile = /home/kein/.gitignore
 [color]
-    ui = always
+	ui = always
 [color "diff"]
-    meta = blue black bold
+	meta = blue black bold
 [push]
     default = matching
 [diff]
